@@ -56,6 +56,8 @@ pip install -r requirements.txt
 Create a `.env` file in the root directory and add:
 ```
 OPENAI_API_KEY=your_openai_api_key
+SECRET_KEY = 1234567890 # for flask App
+OPENWEATHER_API_KEY = your_openweather_api_key
 ```
 
 ### 🛠️ Frontend Setup
@@ -81,6 +83,7 @@ The Flask server will start on `http://localhost:5000`
 ### 💻 Start the Frontend Development Server
 In a new terminal, from the frontend directory:
 ```bash
+cd frontend
 npm start
 ```
 The React development server will start on `http://localhost:3000`
