@@ -128,33 +128,9 @@ def get_weather_data(latitude, longitude):
     except Exception as e:
         print(f"Error fetching weather data: {str(e)}")
         return None
-
-@app.route('/analyze', methods=['POST'])
-@cross_origin()
-# @require_basic_auth
-def analyze():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image provided"}), 400
-
-    # Get image file and location data
-    image_file = request.files['image']
-    latitude = request.form.get('latitude')
-    longitude = request.form.get('longitude')
-    soil_condition = request.form.get('soil_condition')
-    environment_condition = request.form.get('environment_condition')
-    plant_condition = request.form.get('plant_condition')
-    confidence_score, plant_type, condition = predict_disease(image_file)
-
-    if not latitude or not longitude:
-        return jsonify({"error": "Location data is required"}), 400
-
-    # Get weather data
-    weather_data = get_weather_data(float(latitude), float(longitude))
-    if not weather_data:
-        return jsonify({"error": "Failed to fetch weather data"}), 500
-
-    base64_image = encode_image(image_file)
-
+    
+def llm_service(base64_image,weather_data,confidence_score,plant_type,soil_condition,environment_condition,plant_condition):
+    
     prompt = (
         """I am sending an image of a leaf. Check whether the leaf is diseased or not. 
         If diseased then give me the treatment for the disease. Also consider the weather condition like current temperature, maximum and minimum temperature, humidity etc., 
@@ -162,7 +138,7 @@ def analyze():
         Validate the user input on soil, environment and plant condition and check analysis of the image and finally validate both of them.
         Give me the reason for the disease also and provide me the repsonse by following structure"""
     )
-    prompt_v1 = f"""I am sending an image of a {plant_type} leaf. The VGG model has predicted with {confidence_score:.2%} confidence that this leaf has {condition}. 
+    prompt_v1 = f"""I am sending an image of a {plant_type} leaf. The VGG model has predicted with {confidence_score:.2%} confidence. 
     Please provide detailed information about this condition, considering the following weather conditions:
     Current temperature: {weather_data['temperature']}°C
     Maximum temperature: {weather_data['temp_max']}°C
@@ -220,6 +196,38 @@ def analyze():
             }
         }
     )
+
+    return response
+
+@app.route('/analyze', methods=['POST'])
+@cross_origin()
+# @require_basic_auth
+def analyze():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image provided"}), 400
+
+    # Get image file and location data
+    image_file = request.files['image']
+    latitude = request.form.get('latitude')
+    longitude = request.form.get('longitude')
+    soil_condition = request.form.get('soil_condition')
+    environment_condition = request.form.get('environment_condition')
+    plant_condition = request.form.get('plant_condition')
+    confidence_score, plant_type, condition = predict_disease(image_file)
+
+    if not latitude or not longitude:
+        return jsonify({"error": "Location data is required"}), 400
+
+    # Get weather data
+    weather_data = get_weather_data(float(latitude), float(longitude))
+    if not weather_data:
+        return jsonify({"error": "Failed to fetch weather data"}), 500
+
+    base64_image = encode_image(image_file)
+
+    # Call LLM service
+    response = llm_service(base64_image,weather_data,confidence_score,plant_type,soil_condition,environment_condition,plant_condition)
+    
 
     try:
         result = json.loads(response.output_text)
